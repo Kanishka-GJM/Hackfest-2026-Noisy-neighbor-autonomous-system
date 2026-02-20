@@ -1,0 +1,17 @@
+services:
+
+  cpu_stress:
+    image: polinux/stress
+    container_name: cpu_stress
+    command: ["sleep", "infinity"]
+
+  memory_stress:
+    image: polinux/stress
+    container_name: memory_stress
+    command: ["sleep", "infinity"]
+
+  critical_service:
+    build: ./app
+    container_name: critical_service
+    ports:
+      - "5000:5000"
