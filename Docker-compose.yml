@@ -1,8 +1,11 @@
-services:
+version: '3.8'
 
+services:
+  # The noisy neighbors
   cpu_stress:
     image: polinux/stress
     container_name: cpu_stress
+    # Keeps container alive so we can exec into it
     command: ["sleep", "infinity"]
 
   memory_stress:
@@ -10,8 +13,21 @@ services:
     container_name: memory_stress
     command: ["sleep", "infinity"]
 
+  # The victim service
   critical_service:
     build: ./app
     container_name: critical_service
     ports:
       - "5000:5000"
+
+  # The Database
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_container
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
