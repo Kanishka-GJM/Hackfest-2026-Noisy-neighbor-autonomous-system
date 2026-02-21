@@ -1,200 +1,1613 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proactive Noisy Neighbor Mitigation</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Resource Controller · Noisy Neighbor Mitigation</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet" />
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: white; font-family: 'Inter', sans-serif; min-height: 100vh; }
-        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
-        .glow-text { text-shadow: 0 0 10px rgba(96, 165, 250, 0.5); }
+        :root {
+            --blue: #60a5fa;
+            --purple: #a78bfa;
+            --cyan: #22d3ee;
+            --green: #4ade80;
+            --red: #f87171;
+            --orange: #fb923c;
+            --yellow: #fbbf24;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #1e293b transparent;
+        }
+
+        body {
+            background: #050b18;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ── PARTICLE CANVAS ── */
+        #particles {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ══════════════════════════════════════
+       HERO SECTION
+    ══════════════════════════════════════ */
+        #hero {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 36px;
+            overflow: hidden;
+        }
+
+        .hero-headline {
+            text-align: center;
+            font-size: clamp(1.6rem, 4vw, 3rem);
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-sub {
+            text-align: center;
+            font-size: .8rem;
+            color: #475569;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: -28px;
+        }
+
+        /* ── Side-by-side containers row ── */
+        .containers-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 60px;
+            position: relative;
+        }
+
+        .container-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        .container-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            color: #475569;
+        }
+
+        .noisy-label {
+            color: rgba(248, 113, 113, 0.8);
+        }
+
+        .victim-label {
+            color: rgba(167, 139, 250, 0.7);
+        }
+
+        /* Server Container SVG wrapper */
+        #server-wrap {
+            position: relative;
+            width: 200px;
+            height: 260px;
+            filter: drop-shadow(0 0 28px rgba(96, 165, 250, 0.18));
+        }
+
+        /* Victim container */
+        #victim-wrap {
+            position: relative;
+            width: 160px;
+            height: 210px;
+            filter: drop-shadow(0 0 20px rgba(167, 139, 250, 0.15));
+            transform-origin: center bottom;
+        }
+
+        #victim-svg {
+            width: 160px;
+            height: 210px;
+            overflow: visible;
+        }
+
+        /* Stabilized message */
+        #stabilized-msg {
+            margin-top: 10px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--green);
+            opacity: 0;
+            text-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
+            transition: opacity 0.6s ease;
+            white-space: nowrap;
+        }
+
+        #stabilized-msg.visible {
+            opacity: 1;
+        }
+
+        /* The SVG outline of the server rack */
+        #server-svg {
+            width: 200px;
+            height: 260px;
+            overflow: visible;
+        }
+
+        /* Clip path container for the fill */
+        #fill-rect {
+            x: 10;
+            y: 10;
+            width: 180;
+            height: 240;
+            rx: 10;
+            fill: none;
+        }
+
+        /* Rising liquid fill */
+        #liquid {
+            transform-origin: bottom center;
+            transform: scaleY(0);
+        }
+
+        /* Percentage label */
+        #fill-pct {
+            position: absolute;
+            bottom: -36px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--cyan);
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        /* Scroll hint */
+        .scroll-hint {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: #334155;
+            font-size: .7rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .scroll-hint .arrow {
+            width: 20px;
+            height: 20px;
+            border-right: 2px solid #334155;
+            border-bottom: 2px solid #334155;
+            transform: rotate(45deg);
+            animation: bounce 1.5s infinite;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: rotate(45deg) translateY(0)
+            }
+
+            50% {
+                transform: rotate(45deg) translateY(5px)
+            }
+        }
+
+        /* glowing orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+            animation: drift 10s ease-in-out infinite alternate;
+        }
+
+        .orb1 {
+            width: 400px;
+            height: 400px;
+            background: rgba(96, 165, 250, 0.07);
+            top: -80px;
+            left: -80px;
+        }
+
+        .orb2 {
+            width: 350px;
+            height: 350px;
+            background: rgba(167, 139, 250, 0.07);
+            bottom: -60px;
+            right: -60px;
+            animation-delay: -5s;
+        }
+
+        @keyframes drift {
+            0% {
+                transform: translate(0, 0)
+            }
+
+            100% {
+                transform: translate(30px, 20px)
+            }
+        }
+
+        /* ══════════════════════════════════════
+       DASHBOARD SECTION
+    ══════════════════════════════════════ */
+        #dashboard {
+            position: relative;
+            z-index: 1;
+            padding: 28px 24px 60px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Glass card */
+        .card {
+            background: rgba(13, 23, 48, 0.82);
+            border: 1px solid rgba(99, 179, 237, 0.1);
+            border-radius: 16px;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            transition: border-color .3s, box-shadow .3s;
+        }
+
+        .card:hover {
+            border-color: rgba(99, 179, 237, 0.32);
+            box-shadow: 0 0 28px rgba(96, 165, 250, 0.07);
+        }
+
+        /* Header */
+        .dash-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px 24px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, rgba(13, 23, 48, 0.95), rgba(26, 16, 60, 0.95));
+            border: 1px solid rgba(167, 139, 250, 0.18);
+            border-radius: 18px;
+        }
+
+        .dash-header h1 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: -.5px;
+            background: linear-gradient(90deg, var(--blue), var(--purple), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .dash-header p {
+            font-size: .68rem;
+            color: #475569;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .live-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            animation: blink 1.4s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .3
+            }
+        }
+
+        .live-lbl {
+            font-size: .68rem;
+            color: var(--green);
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .status-pill {
+            padding: 7px 18px;
+            border-radius: 50px;
+            font-size: .74rem;
+            font-weight: 700;
+            letter-spacing: .5px;
+            white-space: nowrap;
+            transition: all .4s;
+        }
+
+        .s-normal {
+            background: rgba(74, 222, 128, .12);
+            color: var(--green);
+            border: 1.5px solid var(--green);
+            box-shadow: 0 0 16px rgba(74, 222, 128, .2);
+        }
+
+        .s-alert {
+            background: rgba(248, 113, 113, .12);
+            color: var(--red);
+            border: 1.5px solid var(--red);
+            box-shadow: 0 0 16px rgba(248, 113, 113, .35);
+            animation: pulse-red 1.2s infinite;
+        }
+
+        @keyframes pulse-red {
+
+            0%,
+            100% {
+                box-shadow: 0 0 16px rgba(248, 113, 113, .35)
+            }
+
+            50% {
+                box-shadow: 0 0 34px rgba(248, 113, 113, .7)
+            }
+        }
+
+        /* Metrics row */
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .mcard {
+            padding: 20px 22px;
+            position: relative;
+            overflow: hidden;
+            cursor: default;
+        }
+
+        .mcard::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at top right, var(--ac) 0%, transparent 70%);
+            opacity: .07;
+            transition: opacity .3s;
+        }
+
+        .mcard:hover::before {
+            opacity: .14;
+        }
+
+        .mlabel {
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .mval-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .mval {
+            font-size: 3rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
+            transition: color .4s;
+        }
+
+        .munit {
+            font-size: 1rem;
+            color: #475569;
+            margin-bottom: 5px;
+        }
+
+        .mstatus {
+            margin-top: 7px;
+            font-size: .7rem;
+            color: #64748b;
+        }
+
+        .mstatus span {
+            font-weight: 600;
+        }
+
+        .mring {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        svg.ring {
+            transform: rotate(-90deg);
+        }
+
+        .ring-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, .07);
+            stroke-width: 7;
+        }
+
+        .ring-fill {
+            fill: none;
+            stroke-width: 7;
+            stroke-linecap: round;
+            transition: stroke-dashoffset .8s cubic-bezier(.4, 0, .2, 1), stroke .5s;
+        }
+
+        /* Main grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 320px;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .chart-card {
+            padding: 20px;
+        }
+
+        .ctitle {
+            font-size: .82rem;
+            font-weight: 700;
+            letter-spacing: .5px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ctitle .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Bottom grid */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 360px;
+            gap: 16px;
+        }
+
+        /* Event log */
+        .elog {
+            height: 220px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .elog::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .elog::-webkit-scrollbar-thumb {
+            background: rgba(99, 179, 237, .15);
+            border-radius: 4px;
+        }
+
+        .ev {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            padding: 7px 9px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, .025);
+            border-left: 3px solid transparent;
+            animation: slidein .3s ease;
+            font-size: .76rem;
+        }
+
+        @keyframes slidein {
+            from {
+                opacity: 0;
+                transform: translateX(-6px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0)
+            }
+        }
+
+        .ev.normal {
+            border-left-color: var(--green);
+        }
+
+        .ev.warning {
+            border-left-color: var(--orange);
+        }
+
+        .ev.crit {
+            border-left-color: var(--red);
+        }
+
+        .evt {
+            color: #475569;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .68rem;
+            flex-shrink: 0;
+        }
+
+        .evtxt {
+            color: #cbd5e1;
+            line-height: 1.4;
+        }
+
+        /* Chat */
+        .chat-msgs {
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 160px;
+            max-height: 200px;
+        }
+
+        .chat-msgs::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-msgs::-webkit-scrollbar-thumb {
+            background: rgba(99, 179, 237, .15);
+            border-radius: 4px;
+        }
+
+        .msg {
+            max-width: 90%;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: .78rem;
+            line-height: 1.5;
+            animation: mpop .25s ease;
+        }
+
+        @keyframes mpop {
+            from {
+                opacity: 0;
+                transform: scale(.94)
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1)
+            }
+        }
+
+        .msg.ai {
+            background: rgba(96, 165, 250, .1);
+            border: 1px solid rgba(96, 165, 250, .2);
+            color: #bfdbfe;
+            align-self: flex-start;
+            border-bottom-left-radius: 3px;
+        }
+
+        .msg.user {
+            background: rgba(167, 139, 250, .15);
+            border: 1px solid rgba(167, 139, 250, .25);
+            color: #ddd6fe;
+            align-self: flex-end;
+            border-bottom-right-radius: 3px;
+        }
+
+        .msg.typing {
+            color: #475569;
+            font-style: italic;
+        }
+
+        .chat-bar {
+            display: flex;
+            gap: 7px;
+            padding: 10px 12px;
+            border-top: 1px solid rgba(99, 179, 237, .1);
+        }
+
+        .cinput {
+            flex: 1;
+            background: rgba(255, 255, 255, .05);
+            border: 1px solid rgba(99, 179, 237, .1);
+            border-radius: 9px;
+            padding: 8px 12px;
+            color: #e2e8f0;
+            font-size: .78rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .cinput:focus {
+            border-color: var(--blue);
+        }
+
+        .cinput::placeholder {
+            color: #475569;
+        }
+
+        .csend {
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            border: none;
+            border-radius: 9px;
+            width: 36px;
+            cursor: pointer;
+            color: #fff;
+            font-size: .9rem;
+            transition: opacity .2s, transform .15s;
+            flex-shrink: 0;
+        }
+
+        .csend:hover {
+            opacity: .85;
+            transform: scale(1.06);
+        }
+
+        /* Responsive */
+        @media(max-width:1100px) {
+            .main-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media(max-width:680px) {
+
+            .metrics-row,
+            .main-grid,
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
-<body class="p-6 md:p-10">
 
-    <div class="max-w-7xl mx-auto space-y-8">
-        
-        <header class="flex flex-col md:flex-row justify-between items-center glass-panel p-6 rounded-2xl">
+<body>
+
+    <!-- PARTICLE BACKGROUND -->
+    <canvas id="particles"></canvas>
+
+    <!-- ═══════════════════════════════════════════
+     HERO / LANDING SECTION
+═══════════════════════════════════════════ -->
+    <section id="hero">
+        <div class="orb orb1"></div>
+        <div class="orb orb2"></div>
+
+        <p class="hero-sub">Proactive Noisy Neighbor Mitigation System</p>
+        <h1 class="hero-headline">Scroll to pressurise<br>the container</h1>
+
+        <!-- Side-by-side containers -->
+        <div class="containers-row">
+
+            <!-- NOISY NEIGHBOUR server -->
+            <div class="container-col">
+                <div class="container-label noisy-label">⚠ Noisy Neighbour</div>
+                <div id="server-wrap">
+                    <svg id="server-svg" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <clipPath id="serverClip">
+                                <rect x="10" y="10" width="180" height="240" rx="10" />
+                            </clipPath>
+                            <linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#22d3ee" />
+                                <stop offset="100%" stop-color="#a78bfa" />
+                            </linearGradient>
+                            <pattern id="scanlines" width="200" height="8" patternUnits="userSpaceOnUse">
+                                <line x1="0" y1="0" x2="200" y2="0" stroke="rgba(255,255,255,0.04)" stroke-width="1" />
+                            </pattern>
+                        </defs>
+                        <rect x="10" y="10" width="180" height="240" rx="10" fill="rgba(13,23,48,0.6)"
+                            stroke="rgba(96,165,250,0.35)" stroke-width="1.5" />
+                        <line x1="10" y1="95" x2="190" y2="95" stroke="rgba(96,165,250,0.12)" stroke-width="1" />
+                        <line x1="10" y1="165" x2="190" y2="165" stroke="rgba(96,165,250,0.12)" stroke-width="1" />
+                        <rect x="18" y="22" width="6" height="58" rx="2" fill="rgba(96,165,250,0.08)" />
+                        <rect x="18" y="107" width="6" height="48" rx="2" fill="rgba(96,165,250,0.08)" />
+                        <rect x="18" y="175" width="6" height="68" rx="2" fill="rgba(96,165,250,0.08)" />
+                        <g clip-path="url(#serverClip)">
+                            <!-- Water fill: starts at bottom (y=250) and rises to top (y=10) -->
+                            <rect id="water-rect" x="10" y="250" width="180" height="0" fill="url(#fillGrad)"
+                                opacity="0.92" />
+                            <rect id="water-scan" x="10" y="250" width="180" height="0" fill="url(#scanlines)" />
+                            <!-- Wave ripple always sits at the top surface of the water -->
+                            <ellipse id="wave" cx="100" cy="250" rx="95" ry="6" fill="rgba(34,211,238,0.4)" />
+                        </g>
+                        <circle cx="174" cy="30" r="4" fill="#4ade80" id="led1" />
+                        <circle cx="184" cy="30" r="4" fill="#4ade80" id="led2" />
+                        <circle cx="174" cy="48" r="4" fill="#60a5fa" />
+                        <circle cx="184" cy="48" r="4" fill="#60a5fa" />
+                        <rect x="30" y="225" width="140" height="14" rx="4" fill="rgba(96,165,250,0.08)"
+                            stroke="rgba(96,165,250,0.2)" stroke-width="1" />
+                        <rect x="38" y="229" width="20" height="6" rx="2" fill="rgba(34,211,238,0.3)" />
+                        <rect x="64" y="229" width="20" height="6" rx="2" fill="rgba(167,139,250,0.3)" />
+                        <rect x="90" y="229" width="20" height="6" rx="2" fill="rgba(248,113,113,0.3)" />
+                        <rect x="116" y="229" width="20" height="6" rx="2" fill="rgba(251,191,36,0.3)" />
+                        <rect x="142" y="229" width="20" height="6" rx="2" fill="rgba(74,222,128,0.3)" />
+                        <rect id="glow-overlay" x="10" y="10" width="180" height="240" rx="10" fill="rgba(34,211,238,0)"
+                            stroke="none" />
+                    </svg>
+                    <div id="fill-pct">0%</div>
+                </div>
+            </div>
+
+            <!-- VICTIM server -->
+            <div class="container-col">
+                <div class="container-label victim-label">🎯 Critical Service</div>
+                <div id="victim-wrap">
+                    <svg id="victim-svg" viewBox="0 0 160 210" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="victimGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#4ade80" />
+                                <stop offset="100%" stop-color="#22d3ee" />
+                            </linearGradient>
+                        </defs>
+                        <!-- Body -->
+                        <rect x="8" y="8" width="144" height="194" rx="9" fill="rgba(13,23,48,0.7)"
+                            stroke="rgba(167,139,250,0.35)" stroke-width="1.5" />
+                        <!-- Rails -->
+                        <line x1="8" y1="75" x2="152" y2="75" stroke="rgba(167,139,250,0.12)" stroke-width="1" />
+                        <line x1="8" y1="135" x2="152" y2="135" stroke="rgba(167,139,250,0.12)" stroke-width="1" />
+                        <!-- Slot bars -->
+                        <rect x="14" y="16" width="5" height="48" rx="2" fill="rgba(167,139,250,0.1)" />
+                        <rect x="14" y="85" width="5" height="40" rx="2" fill="rgba(167,139,250,0.1)" />
+                        <rect x="14" y="145" width="5" height="48" rx="2" fill="rgba(167,139,250,0.1)" />
+                        <!-- Gradient fill (always visible - this server is running normally) -->
+                        <rect x="8" y="8" width="144" height="194" rx="9" fill="url(#victimGrad)" opacity="0.06" />
+                        <!-- Status lines simulating CPU usage bars -->
+                        <rect id="vbar1" x="22" y="28" width="110" height="7" rx="3" fill="rgba(74,222,128,0.5)" />
+                        <rect id="vbar2" x="22" y="42" width="80" height="7" rx="3" fill="rgba(74,222,128,0.35)" />
+                        <rect id="vbar3" x="22" y="56" width="95" height="7" rx="3" fill="rgba(74,222,128,0.4)" />
+                        <rect id="vbar4" x="22" y="88" width="60" height="7" rx="3" fill="rgba(34,211,238,0.4)" />
+                        <rect id="vbar5" x="22" y="102" width="100" height="7" rx="3" fill="rgba(34,211,238,0.3)" />
+                        <!-- LEDs -->
+                        <circle id="vled1" cx="136" cy="22" r="4" fill="#4ade80" />
+                        <circle id="vled2" cx="146" cy="22" r="4" fill="#4ade80" />
+                        <!-- Ports bottom -->
+                        <rect x="22" y="182" width="116" height="12" rx="3" fill="rgba(167,139,250,0.07)"
+                            stroke="rgba(167,139,250,0.18)" stroke-width="1" />
+                        <rect x="28" y="185" width="16" height="6" rx="2" fill="rgba(74,222,128,0.4)" />
+                        <rect x="50" y="185" width="16" height="6" rx="2" fill="rgba(34,211,238,0.35)" />
+                        <rect x="72" y="185" width="16" height="6" rx="2" fill="rgba(167,139,250,0.35)" />
+                        <rect x="94" y="185" width="16" height="6" rx="2" fill="rgba(74,222,128,0.3)" />
+                        <!-- Victim glow overlay -->
+                        <rect id="victim-glow" x="8" y="8" width="144" height="194" rx="9" fill="rgba(248,113,113,0)"
+                            stroke="none" />
+                    </svg>
+                </div>
+                <div id="stabilized-msg">✅ Stabilized</div>
+            </div>
+
+        </div><!-- /.containers-row -->
+
+        <div class="scroll-hint">
+            <span>scroll</span>
+            <div class="arrow"></div>
+        </div>
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════
+     DASHBOARD SECTION
+═══════════════════════════════════════════ -->
+    <section id="dashboard">
+        <!-- Header -->
+        <div class="dash-header">
             <div>
-                <h1 class="text-3xl font-bold text-blue-400 glow-text">🛡️ AI Resource Controller</h1>
-                <p class="text-slate-400 mt-2 text-sm uppercase tracking-wider">Live Noisy Neighbor Mitigation Dashboard</p>
+                <h1>🛡️ AI Resource Controller</h1>
+                <p>Proactive Noisy Neighbor Mitigation · Live Autonomous System</p>
             </div>
-            <div id="status-badge" class="mt-4 md:mt-0 px-6 py-3 rounded-full font-bold text-lg transition-all duration-300 shadow-lg">
-                CONNECTING...
+            <div class="header-right">
+                <div class="live-dot"></div>
+                <span class="live-lbl">LIVE</span>
+                <div id="status-badge" class="status-pill s-normal">✅ SYSTEM NORMAL</div>
             </div>
-        </header>
+        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <svg class="w-16 h-16 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path d="M13 7H7v6h6V7z"/><path fill-rule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm12 2v10H3V5h14z" clip-rule="evenodd"/></svg>
+        <!-- ── LIVE ANOMALY MONITOR ── -->
+        <div class="card" style="padding:20px 24px;margin-bottom:18px;" id="anomaly-card">
+            <div
+                style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+                <div class="ctitle" style="margin:0">
+                    <div class="dot" style="background:var(--red)"></div>
+                    Live Anomaly Monitor
                 </div>
-                <h3 class="text-slate-400 text-sm font-semibold mb-2 uppercase tracking-wide">CPU Utilization</h3>
-                <div class="flex items-end gap-2">
-                    <p class="text-5xl font-bold text-blue-400" id="current-cpu">0</p>
-                    <span class="text-xl text-slate-500 mb-1">%</span>
-                </div>
-            </div>
-
-            <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <svg class="w-16 h-16 text-purple-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8l4-2 4 2V6z" clip-rule="evenodd"/></svg>
-                </div>
-                <h3 class="text-slate-400 text-sm font-semibold mb-2 uppercase tracking-wide">Memory Utilization</h3>
-                <div class="flex items-end gap-2">
-                    <p class="text-5xl font-bold text-purple-400" id="current-mem">0</p>
-                    <span class="text-xl text-slate-500 mb-1">%</span>
+                <div id="anomaly-status-pill"
+                    style="padding:6px 16px;border-radius:50px;font-size:.72rem;font-weight:700;letter-spacing:.5px;background:rgba(74,222,128,.12);color:var(--green);border:1.5px solid var(--green);transition:all .5s;">
+                    ✅ NORMAL
                 </div>
             </div>
+            <div style="display:flex;align-items:flex-end;gap:48px;flex-wrap:wrap;">
 
-            <div class="glass-panel p-6 rounded-2xl relative overflow-hidden group">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <svg class="w-16 h-16 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+                <!-- Mini noisy container -->
+                <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                    <div
+                        style="font-size:.62rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(248,113,113,.8);">
+                        ⚠ Noisy Neighbour</div>
+                    <div id="mini-noisy-wrap"
+                        style="position:relative;width:90px;height:120px;filter:drop-shadow(0 0 12px rgba(96,165,250,0.2));">
+                        <svg viewBox="0 0 90 120" width="90" height="120" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <clipPath id="miniClip">
+                                    <rect x="4" y="4" width="82" height="112" rx="7" />
+                                </clipPath>
+                                <linearGradient id="miniFillGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop id="miniStop0" offset="0%" stop-color="#22d3ee" />
+                                    <stop id="miniStop1" offset="100%" stop-color="#a78bfa" />
+                                </linearGradient>
+                            </defs>
+                            <rect x="4" y="4" width="82" height="112" rx="7" fill="rgba(13,23,48,0.7)"
+                                stroke="rgba(96,165,250,0.35)" stroke-width="1.2" />
+                            <line x1="4" y1="44" x2="86" y2="44" stroke="rgba(96,165,250,0.1)" stroke-width=".8" />
+                            <line x1="4" y1="76" x2="86" y2="76" stroke="rgba(96,165,250,0.1)" stroke-width=".8" />
+                            <g clip-path="url(#miniClip)">
+                                <rect id="mini-water" x="4" y="116" width="82" height="0" fill="url(#miniFillGrad)"
+                                    opacity="0.9" />
+                                <ellipse id="mini-wave" cx="45" cy="116" rx="42" ry="4" fill="rgba(34,211,238,0.45)" />
+                            </g>
+                            <circle id="mini-led1" cx="76" cy="13" r="3" fill="#4ade80" />
+                            <circle id="mini-led2" cx="83" cy="13" r="3" fill="#4ade80" />
+                        </svg>
+                    </div>
+                    <div id="mini-pct"
+                        style="font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;color:var(--cyan);">
+                        0%</div>
                 </div>
-                <h3 class="text-slate-400 text-sm font-semibold mb-2 uppercase tracking-wide">Service Latency</h3>
-                <div class="flex items-end gap-2">
-                    <p class="text-5xl font-bold text-red-400" id="current-lat">0</p>
-                    <span class="text-xl text-slate-500 mb-1">ms</span>
+
+                <!-- Anomaly info -->
+                <div style="flex:1;min-width:180px;">
+                    <div id="anomaly-detail" style="font-size:.78rem;color:#64748b;line-height:1.7;">
+                        <div>CPU: <span id="a-cpu" style="color:var(--blue);font-weight:600;">–</span></div>
+                        <div>Memory: <span id="a-mem" style="color:var(--purple);font-weight:600;">–</span></div>
+                        <div>Latency: <span id="a-lat" style="color:var(--red);font-weight:600;">–</span></div>
+                        <div style="margin-top:6px;">State: <span id="a-state"
+                                style="font-weight:700;color:var(--green);">NORMAL</span></div>
+                    </div>
+                    <div id="anomaly-action-log"
+                        style="margin-top:10px;font-size:.7rem;color:#475569;font-style:italic;">Monitoring…</div>
+                </div>
+
+                <!-- Mini victim container -->
+                <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                    <div
+                        style="font-size:.62rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(167,139,250,.7);">
+                        🎯 Critical Service</div>
+                    <div id="mini-victim-wrap"
+                        style="position:relative;width:80px;height:105px;filter:drop-shadow(0 0 10px rgba(167,139,250,0.18));transform-origin:center bottom;">
+                        <svg viewBox="0 0 80 105" width="80" height="105" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="miniVictimGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#4ade80" />
+                                    <stop offset="100%" stop-color="#22d3ee" />
+                                </linearGradient>
+                            </defs>
+                            <rect x="4" y="4" width="72" height="97" rx="6" fill="rgba(13,23,48,0.7)"
+                                stroke="rgba(167,139,250,0.35)" stroke-width="1.2" />
+                            <rect x="4" y="4" width="72" height="97" rx="6" fill="url(#miniVictimGrad)"
+                                opacity="0.07" />
+                            <rect id="mv-bar1" x="12" y="14" width="52" height="5" rx="2" fill="rgba(74,222,128,0.5)" />
+                            <rect id="mv-bar2" x="12" y="23" width="38" height="5" rx="2"
+                                fill="rgba(74,222,128,0.38)" />
+                            <rect id="mv-bar3" x="12" y="32" width="45" height="5" rx="2"
+                                fill="rgba(74,222,128,0.44)" />
+                            <rect id="mv-bar4" x="12" y="44" width="30" height="5" rx="2" fill="rgba(34,211,238,0.4)" />
+                            <rect id="mv-bar5" x="12" y="53" width="48" height="5" rx="2"
+                                fill="rgba(34,211,238,0.32)" />
+                            <circle id="mv-led1" cx="66" cy="12" r="3" fill="#4ade80" />
+                            <circle id="mv-led2" cx="72" cy="12" r="3" fill="#4ade80" />
+                            <rect id="mini-victim-glow" x="4" y="4" width="72" height="97" rx="6"
+                                fill="rgba(248,113,113,0)" />
+                        </svg>
+                    </div>
+                    <div id="live-stabilized-msg"
+                        style="font-size:.66rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);opacity:0;text-shadow:0 0 10px rgba(74,222,128,.6);transition:opacity .6s;">
+                        ✅ Stabilized</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Metric cards -->
+        <div class="metrics-row">
+            <div class="card mcard" style="--ac:#3b82f6">
+                <div class="mlabel">⚙️ CPU Utilization</div>
+                <div class="mval-row">
+                    <div class="mval" id="val-cpu" style="color:var(--blue)">0.0</div>
+                    <div class="munit">%</div>
+                </div>
+                <div class="mstatus">Threshold: <span id="cpu-status" style="color:var(--green)">SAFE</span></div>
+                <div class="mring">
+                    <svg class="ring" width="70" height="70" viewBox="0 0 70 70">
+                        <circle class="ring-bg" cx="35" cy="35" r="27" />
+                        <circle class="ring-fill" id="ring-cpu" cx="35" cy="35" r="27" stroke="var(--blue)"
+                            stroke-dasharray="169.6" stroke-dashoffset="169.6" />
+                    </svg>
+                </div>
+            </div>
+            <div class="card mcard" style="--ac:#a855f7">
+                <div class="mlabel">🧠 Memory Utilization</div>
+                <div class="mval-row">
+                    <div class="mval" id="val-mem" style="color:var(--purple)">0.0</div>
+                    <div class="munit">%</div>
+                </div>
+                <div class="mstatus">Threshold: <span id="mem-status" style="color:var(--green)">SAFE</span></div>
+                <div class="mring">
+                    <svg class="ring" width="70" height="70" viewBox="0 0 70 70">
+                        <circle class="ring-bg" cx="35" cy="35" r="27" />
+                        <circle class="ring-fill" id="ring-mem" cx="35" cy="35" r="27" stroke="var(--purple)"
+                            stroke-dasharray="169.6" stroke-dashoffset="169.6" />
+                    </svg>
+                </div>
+            </div>
+            <div class="card mcard" style="--ac:#ef4444">
+                <div class="mlabel">⏱️ Service Latency</div>
+                <div class="mval-row">
+                    <div class="mval" id="val-lat" style="color:var(--red)">0</div>
+                    <div class="munit">ms</div>
+                </div>
+                <div class="mstatus">Threshold: <span id="lat-status" style="color:var(--green)">SAFE</span></div>
+                <div class="mring">
+                    <svg class="ring" width="70" height="70" viewBox="0 0 70 70">
+                        <circle class="ring-bg" cx="35" cy="35" r="27" />
+                        <circle class="ring-fill" id="ring-lat" cx="35" cy="35" r="27" stroke="var(--red)"
+                            stroke-dasharray="169.6" stroke-dashoffset="169.6" />
+                    </svg>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <div class="glass-panel p-6 rounded-2xl lg:col-span-2">
-                <h3 class="text-xl font-bold mb-4 text-slate-200">📈 Live Resource Timeline</h3>
-                <canvas id="timelineChart" height="120"></canvas>
+        <!-- Charts row -->
+        <div class="main-grid">
+            <div class="card chart-card">
+                <div class="ctitle">
+                    <div class="dot" style="background:var(--cyan)"></div>Live Resource Timeline
+                </div>
+                <canvas id="timelineChart" height="165"></canvas>
             </div>
-
-            <div class="glass-panel p-6 rounded-2xl">
-                <h3 class="text-xl font-bold mb-4 text-slate-200">⚖️ Before vs. After Mitigation</h3>
-                <p class="text-xs text-slate-400 mb-4">Compares peak noisy neighbor chaos to the current stabilized state.</p>
-                <canvas id="comparisonChart" height="200"></canvas>
+            <div class="card chart-card">
+                <div class="ctitle">
+                    <div class="dot" style="background:var(--orange)"></div>Before vs After Mitigation
+                </div>
+                <canvas id="comparisonChart" height="165"></canvas>
+            </div>
+            <div class="card chart-card">
+                <div class="ctitle">
+                    <div class="dot" style="background:var(--purple)"></div>Resource Health Radar
+                </div>
+                <canvas id="radarChart" height="175"></canvas>
             </div>
         </div>
-    </div>
 
+        <!-- Bottom row -->
+        <div class="bottom-grid">
+            <div class="card chart-card">
+                <div class="ctitle" style="display:flex;align-items:center;gap:8px;">
+                    <div style="display:flex;gap:4px;">
+                        <div class="dot" style="background:var(--green)"></div>
+                        <div class="dot" style="background:var(--red)"></div>
+                    </div>
+                    Resource Allocation (Tug-of-War)
+                </div>
+                <!-- Adding padding to visually size the bar nicely -->
+                <div style="padding:15px 0;">
+                    <canvas id="tugChart" height="110"></canvas>
+                </div>
+            </div>
+            <div class="card chart-card">
+                <div class="ctitle">
+                    <div class="dot" style="background:var(--yellow)"></div>System Event Log
+                </div>
+                <div class="elog" id="event-log"></div>
+            </div>
+            <div class="card" style="padding:0;display:flex;flex-direction:column;">
+                <div style="padding:14px 16px 0;flex-shrink:0;">
+                    <div class="ctitle">
+                        <div class="dot" style="background:var(--blue)"></div>AI System Analyst
+                    </div>
+                </div>
+                <div class="chat-msgs" id="chat-msgs"></div>
+                <div class="chat-bar">
+                    <input class="cinput" id="chat-input" type="text" placeholder="Ask about system state…"
+                        autocomplete="off" />
+                    <button class="csend" id="chat-send">➤</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════ -->
     <script>
-        // --- 1. Common Chart Config ---
-        Chart.defaults.color = '#94a3b8';
-        Chart.defaults.font.family = 'Inter';
+        /* ─── PARTICLES ─── */
+        (() => {
+            const c = document.getElementById('particles'), x = c.getContext('2d');
+            let W, H, pts = []; const N = 65;
+            const resize = () => { W = c.width = innerWidth; H = c.height = innerHeight; };
+            window.addEventListener('resize', resize); resize();
+            for (let i = 0; i < N; i++)pts.push({ x: Math.random() * 3000, y: Math.random() * 3000, vx: (Math.random() - .5) * .28, vy: (Math.random() - .5) * .28, r: Math.random() * 1.4 + .4, h: Math.random() > .5 ? 210 : 270 });
+            const draw = () => {
+                x.clearRect(0, 0, W, H);
+                pts.forEach(p => {
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0; if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+                    x.beginPath(); x.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    x.fillStyle = `hsla(${p.h},80%,70%,.45)`; x.fill();
+                });
+                for (let i = 0; i < N; i++)for (let j = i + 1; j < N; j++) {
+                    const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, d = Math.hypot(dx, dy);
+                    if (d < 115) { x.beginPath(); x.moveTo(pts[i].x, pts[i].y); x.lineTo(pts[j].x, pts[j].y); x.strokeStyle = `rgba(96,165,250,${.1 * (1 - d / 115)})`; x.lineWidth = .6; x.stroke(); }
+                }
+                requestAnimationFrame(draw);
+            }; draw();
+        })();
 
-        // --- 2. Live Timeline Chart Setup ---
-        const timelineCtx = document.getElementById('timelineChart').getContext('2d');
-        const timelineChart = new Chart(timelineCtx, {
+        /* ─── GSAP SCROLL TRIGGER ─── */
+        gsap.registerPlugin(ScrollTrigger);
+
+        (() => {
+            const liquid = document.getElementById('liquid');
+            const pctEl = document.getElementById('fill-pct');
+            const glow = document.getElementById('glow-overlay');
+            const led1 = document.getElementById('led1');
+            const led2 = document.getElementById('led2');
+            const wave = document.getElementById('wave');
+            const gradEl = document.getElementById('fillGrad');
+
+            // Victim container elements
+            const victimWrap = document.getElementById('victim-wrap');
+            const victimGlow = document.getElementById('victim-glow');
+            const vled1 = document.getElementById('vled1');
+            const vled2 = document.getElementById('vled2');
+            const stabilizedMsg = document.getElementById('stabilized-msg');
+            const vbars = ['vbar1', 'vbar2', 'vbar3', 'vbar4', 'vbar5'].map(id => document.getElementById(id));
+
+            // Shake state — driven by ticker, amplitude set by onUpdate
+            let shakeAmp = 0;         // current shake amplitude in px
+            let shakeFreq = 6;        // oscillations per second
+            let wasStable = true;     // tracks stabilized state for message
+            let stableTimer = null;
+
+            // Build the full scroll-timeline in one place.
+            const tl = gsap.timeline({
+                scrollTrigger: {
+                    trigger: '#hero',
+                    start: 'top top',
+                    end: '+=200%',
+                    pin: true,
+                    pinSpacing: true,
+                    scrub: 1.0,
+                    onUpdate(self) {
+                        const p = self.progress;
+
+                        // Map overall progress to fluid progress (up then down)
+                        let fillRate = 0;
+                        if (p <= 0.4) fillRate = p / 0.4;
+                        else if (p <= 0.5) fillRate = 1;
+                        else if (p <= 0.9) fillRate = Math.max(0, 1 - ((p - 0.5) / 0.4));
+                        else fillRate = 0;
+
+                        if (p >= 0.9) window.heroTutorialComplete = true;
+
+                        const pct = Math.round(fillRate * 100);
+                        pctEl.textContent = pct + '%';
+
+                        // ── Noisy container LED + gradient ──
+                        if (pct >= 80) {
+                            const f = Math.random() > .5 ? '#f87171' : '#fbbf24';
+                            led1.setAttribute('fill', f); led2.setAttribute('fill', f);
+                        } else {
+                            led1.setAttribute('fill', '#4ade80'); led2.setAttribute('fill', '#4ade80');
+                        }
+                        if (pct >= 80) {
+                            gradEl.children[0].setAttribute('stop-color', '#f87171');
+                            gradEl.children[1].setAttribute('stop-color', '#fb923c');
+                        } else if (pct >= 50) {
+                            gradEl.children[0].setAttribute('stop-color', '#fbbf24');
+                            gradEl.children[1].setAttribute('stop-color', '#a78bfa');
+                        } else {
+                            gradEl.children[0].setAttribute('stop-color', '#22d3ee');
+                            gradEl.children[1].setAttribute('stop-color', '#a78bfa');
+                        }
+                        const r = Math.min(255, Math.round(fillRate * 510));
+                        const g = Math.round(34 * (1 - fillRate));
+                        const b = Math.round(238 * (1 - fillRate));
+                        glow.setAttribute('fill', `rgba(${r},${g},${b},${fillRate * 0.1})`);
+
+                        // ── Victim shake amplitude + frequency ──
+                        if (fillRate <= 0.02) {
+                            // Nearly empty — stable
+                            shakeAmp = 0;
+                            shakeFreq = 3;
+                            // Show stabilized message once when returning to 0 (after having gone up)
+                            if (!wasStable && p > 0.5) {
+                                wasStable = true;
+                                clearTimeout(stableTimer);
+                                stableTimer = setTimeout(() => {
+                                    stabilizedMsg.classList.add('visible');
+                                    // Fade it away after 3s
+                                    setTimeout(() => stabilizedMsg.classList.remove('visible'), 3000);
+                                }, 300);
+                            } else if (p < 0.1) {
+                                // Reset for top of page
+                                wasStable = true;
+                            }
+                            gsap.set(victimWrap, { x: 0, rotation: 0 });
+                            victimGlow.setAttribute('fill', 'rgba(248,113,113,0)');
+                            // Reset victim LEDs to green
+                            vled1.setAttribute('fill', '#4ade80');
+                            vled2.setAttribute('fill', '#4ade80');
+                            // Reset bars to calm cyan/green
+                            vbars.forEach((b, i) => b.setAttribute('fill', 'rgba(74,222,128,' + (0.35 + i * 0.03) + ')'));
+                        } else {
+                            wasStable = false;
+                            // Shake scaled down intentionally (max amp 8px instead of 22px)
+                            shakeAmp = 1 + fillRate * fillRate * 7;   // quadratic ramp
+                            shakeFreq = 3 + fillRate * 5;             // faster at high pressure
+
+                            // Victim glow redness increases with pressure
+                            const gAlpha = fillRate * 0.25;
+                            victimGlow.setAttribute('fill', `rgba(248,113,113,${gAlpha})`);
+
+                            // Victim LEDs flicker red at 70%+
+                            if (pct >= 70) {
+                                const vf = Math.random() > .4 ? '#f87171' : '#fbbf24';
+                                vled1.setAttribute('fill', vf); vled2.setAttribute('fill', vf);
+                            }
+
+                            // Activity bars shift toward red under pressure
+                            const barColor = pct >= 80 ? `rgba(248,113,113,0.7)` : `rgba(251,191,36,0.6)`;
+                            if (pct >= 50) vbars.forEach(b => b.setAttribute('fill', barColor));
+                        }
+                    }
+                }
+            });
+
+            // Phase 1 (0→40%): water rises from bottom, wave tracks surface
+            tl.to('#water-rect', { attr: { y: 10, height: 240 }, ease: 'none', duration: 0.4 }, 0)
+                .to('#water-scan', { attr: { y: 10, height: 240 }, ease: 'none', duration: 0.4 }, 0)
+                .to('#wave', { attr: { cy: 10 }, ease: 'none', duration: 0.4 }, 0)
+
+                // Phase 2 (50→90%): water drops back to 0
+                .to('#water-rect', { attr: { y: 250, height: 0 }, ease: 'none', duration: 0.4 }, 0.5)
+                .to('#water-scan', { attr: { y: 250, height: 0 }, ease: 'none', duration: 0.4 }, 0.5)
+                .to('#wave', { attr: { cy: 250 }, ease: 'none', duration: 0.4 }, 0.5)
+
+                // Phase 3 (90→100%): hero text fades out
+                .to(['.hero-headline', '.hero-sub', '.scroll-hint'], {
+                    opacity: 0, y: -20, stagger: 0.05, ease: 'power1.in', duration: 0.1
+                }, 0.9);
+
+            // ── SHAKE TICKER ──
+            // Runs every frame; applies sinusoidal x + tiny rotation to victim-wrap
+            gsap.ticker.add(() => {
+                if (shakeAmp < 0.5) return; // skip when stable
+                const t = gsap.ticker.time;
+                const x = Math.sin(t * shakeFreq * Math.PI * 2) * shakeAmp;
+                const rot = Math.sin(t * shakeFreq * Math.PI * 2 + 1) * shakeAmp * 0.4;
+                gsap.set(victimWrap, { x, rotation: rot });
+            });
+
+            // Dashboard fade-in entry
+            gsap.from('#dashboard', {
+                opacity: 0, y: 60,
+                duration: 1, ease: 'power3.out',
+                scrollTrigger: {
+                    trigger: '#dashboard',
+                    start: 'top 90%',
+                    toggleActions: 'play none none none'
+                }
+            });
+            gsap.from('.dash-header', {
+                opacity: 0, y: 25, duration: .7, ease: 'power2.out', delay: .15,
+                scrollTrigger: { trigger: '#dashboard', start: 'top 88%', toggleActions: 'play none none none' }
+            });
+            gsap.from('.mcard', {
+                opacity: 0, y: 30, stagger: .1, duration: .6, ease: 'power2.out', delay: .3,
+                scrollTrigger: { trigger: '#dashboard', start: 'top 85%', toggleActions: 'play none none none' }
+            });
+        })();
+
+        /* ─── LIVE ANOMALY MONITOR ─── */
+        const miniWater = document.getElementById('mini-water');
+        const miniWave = document.getElementById('mini-wave');
+        const miniLed1 = document.getElementById('mini-led1');
+        const miniLed2 = document.getElementById('mini-led2');
+        const miniPct = document.getElementById('mini-pct');
+        const miniStop0 = document.getElementById('miniStop0');
+        const miniStop1 = document.getElementById('miniStop1');
+        const miniVictim = document.getElementById('mini-victim-wrap');
+        const miniVglow = document.getElementById('mini-victim-glow');
+        const mvLed1 = document.getElementById('mv-led1');
+        const mvLed2 = document.getElementById('mv-led2');
+        const mvBars = ['mv-bar1', 'mv-bar2', 'mv-bar3', 'mv-bar4', 'mv-bar5'].map(id => document.getElementById(id));
+        const liveStabMsg = document.getElementById('live-stabilized-msg');
+        const anomalyPill = document.getElementById('anomaly-status-pill');
+        const anomalyLog = document.getElementById('anomaly-action-log');
+        const aState = document.getElementById('a-state');
+        const aCpu = document.getElementById('a-cpu');
+        const aMem = document.getElementById('a-mem');
+        const aLat = document.getElementById('a-lat');
+
+        // Live shake state
+        let liveShakeAmp = 0;
+        let liveShakeFreq = 5;
+        let liveWasNormal = true;
+        let liveStableHold = null;
+
+        // Live anomaly shake ticker (RAF-based)
+        (function liveShakeTick() {
+            if (liveShakeAmp > 0.4) {
+                const t = performance.now() / 1000;
+                const sx = Math.sin(t * liveShakeFreq * Math.PI * 2) * liveShakeAmp;
+                const sr = Math.sin(t * liveShakeFreq * Math.PI * 2 + 1.2) * liveShakeAmp * 0.35;
+                miniVictim.style.transform = `translateX(${sx}px) rotate(${sr}deg)`;
+            } else {
+                miniVictim.style.transform = '';
+            }
+            requestAnimationFrame(liveShakeTick);
+        })();
+
+        function updateAnomalyMonitor(cpu, mem, lat, state) {
+            // ── Anomaly pill ──
+            const isAnomaly = state !== 'NORMAL';
+            anomalyPill.style.background = isAnomaly ? 'rgba(248,113,113,.12)' : 'rgba(74,222,128,.12)';
+            anomalyPill.style.color = isAnomaly ? 'var(--red)' : 'var(--green)';
+            anomalyPill.style.borderColor = isAnomaly ? 'var(--red)' : 'var(--green)';
+            anomalyPill.textContent = isAnomaly ? '⚠️ ' + state.replace(/_/g, ' ') : '✅ NORMAL';
+
+            // ── Detail numbers ──
+            aCpu.textContent = cpu.toFixed(1) + '%';
+            aMem.textContent = mem.toFixed(1) + '%';
+            aLat.textContent = lat.toFixed(0) + ' ms';
+            aState.textContent = state;
+            aState.style.color = isAnomaly ? 'var(--red)' : 'var(--green)';
+
+            // ── Mini noisy fill (water rising) ──
+            // Normalise: map CPU to 0-100%, BUT HOLD AT 0 UNTIL HERO TUTORIAL COMPLETES
+            const fillPct = window.heroTutorialComplete ? Math.min(cpu / 150 * 100, 100) : 0;
+            const waterH = Math.round(fillPct / 100 * 112);
+            const waterY = 116 - waterH;
+            miniWater.setAttribute('y', waterY);
+            miniWater.setAttribute('height', waterH);
+            miniWave.setAttribute('cy', waterY);
+            miniPct.textContent = Math.round(fillPct) + '%';
+
+            // Colour shift: cyan → yellow → bright red
+            if (fillPct >= 80) {
+                miniStop0.setAttribute('stop-color', '#dc2626');
+                miniStop1.setAttribute('stop-color', '#ef4444');
+                const f = Math.random() > .5 ? '#f87171' : '#fbbf24';
+                miniLed1.setAttribute('fill', f); miniLed2.setAttribute('fill', f);
+                miniPct.style.color = 'var(--red)';
+            } else if (fillPct >= 50) {
+                miniStop0.setAttribute('stop-color', '#fbbf24');
+                miniStop1.setAttribute('stop-color', '#fb923c');
+                miniLed1.setAttribute('fill', '#fbbf24'); miniLed2.setAttribute('fill', '#fbbf24');
+                miniPct.style.color = 'var(--yellow)';
+            } else {
+                miniStop0.setAttribute('stop-color', '#22d3ee');
+                miniStop1.setAttribute('stop-color', '#a78bfa');
+                miniLed1.setAttribute('fill', '#4ade80'); miniLed2.setAttribute('fill', '#4ade80');
+                miniPct.style.color = 'var(--cyan)';
+            }
+
+            // ── Mini victim shake ──
+            if (isAnomaly && window.heroTutorialComplete) {
+                liveWasNormal = false;
+                clearTimeout(liveStableHold);
+                liveStabMsg.style.opacity = '0';
+                // Quadratic ramp based on CPU pressure, scaled down for realism
+                const p = fillPct / 100;
+                liveShakeAmp = 1 + p * p * 6;
+                liveShakeFreq = 3 + p * 5;
+                // Redness on victim
+                miniVglow.setAttribute('fill', `rgba(248,113,113,${p * 0.3})`);
+                const vf = fillPct >= 70 ? (Math.random() > .4 ? '#f87171' : '#fbbf24') : '#4ade80';
+                mvLed1.setAttribute('fill', vf); mvLed2.setAttribute('fill', vf);
+                const barC = fillPct >= 70 ? 'rgba(248,113,113,0.7)' : 'rgba(251,191,36,0.6)';
+                if (fillPct >= 50) mvBars.forEach(b => b.setAttribute('fill', barC));
+                anomalyLog.textContent = `Mitigating: ${state.replace(/_/g, ' ')} (CPU ${cpu.toFixed(0)}%, Lat ${lat.toFixed(0)} ms)`;
+            } else {
+                // Normal — calm victim
+                liveShakeAmp = 0;
+                liveShakeFreq = 5;
+                miniVglow.setAttribute('fill', 'rgba(248,113,113,0)');
+                mvLed1.setAttribute('fill', '#4ade80'); mvLed2.setAttribute('fill', '#4ade80');
+                mvBars.forEach((b, i) => b.setAttribute('fill', 'rgba(74,222,128,' + (0.35 + i * 0.03) + ')'));
+                if (!liveWasNormal) {
+                    liveWasNormal = true;
+                    liveStableHold = setTimeout(() => {
+                        liveStabMsg.style.opacity = '1';
+                        setTimeout(() => { liveStabMsg.style.opacity = '0'; }, 3500);
+                    }, 300);
+                }
+                anomalyLog.textContent = 'All systems nominal. AI controller in passive monitoring mode.';
+            }
+        }
+
+
+        Chart.defaults.color = '#64748b';
+        Chart.defaults.font.family = 'Inter';
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(5,11,24,0.92)';
+        Chart.defaults.plugins.tooltip.borderColor = 'rgba(99,179,237,0.28)';
+        Chart.defaults.plugins.tooltip.borderWidth = 1;
+        Chart.defaults.plugins.tooltip.cornerRadius = 10;
+        Chart.defaults.plugins.tooltip.padding = 10;
+        const gc = 'rgba(255,255,255,0.05)';
+
+        function mkGrad(ctx, c1, c2) { const g = ctx.createLinearGradient(0, 0, 0, 280); g.addColorStop(0, c1); g.addColorStop(1, c2); return g; }
+
+        /* Timeline */
+        const tlCtx = document.getElementById('timelineChart').getContext('2d');
+        const tlChart = new Chart(tlCtx, {
             type: 'line',
-            data: { 
-                labels: [], 
-                datasets: [
-                    { label: 'CPU (%)', borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 3, tension: 0.4, fill: true, data: [] },
-                    { label: 'Memory (%)', borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', borderWidth: 3, tension: 0.4, fill: true, data: [] },
-                    { label: 'Latency (ms / 10)', borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 3, tension: 0.4, fill: true, data: [] } // Scaled latency for visual fit
-                ] 
+            data: {
+                labels: [], datasets: [
+                    { label: 'CPU %', borderColor: '#60a5fa', backgroundColor: mkGrad(tlCtx, 'rgba(96,165,250,.32)', 'rgba(96,165,250,0)'), borderWidth: 2.5, tension: .45, fill: true, pointRadius: 0, pointHoverRadius: 5, data: [] },
+                    { label: 'Mem %', borderColor: '#a78bfa', backgroundColor: mkGrad(tlCtx, 'rgba(167,139,250,.28)', 'rgba(167,139,250,0)'), borderWidth: 2.5, tension: .45, fill: true, pointRadius: 0, pointHoverRadius: 5, data: [] },
+                    { label: 'Latency', yAxisID: 'yLat', borderColor: '#ffffff', backgroundColor: 'transparent', borderWidth: 2.5, tension: .4, fill: false, pointRadius: 0, pointHoverRadius: 5, data: [] }
+                ]
             },
             options: {
-                responsive: true,
-                animation: { duration: 0 }, // Disable animation for smoother live scrolling
+                responsive: true, interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+                    x: { grid: { color: gc }, ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+                    y: { grid: { color: gc }, beginAtZero: true, ticks: { font: { size: 10 } } },
+                    yLat: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { font: { size: 10 }, color: '#fff' } }
                 },
-                plugins: { legend: { position: 'top' } }
+                plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } }, animation: { duration: 500 }
             }
         });
 
-        // --- 3. Before & After Comparison Chart Setup ---
-        const compCtx = document.getElementById('comparisonChart').getContext('2d');
-        const comparisonChart = new Chart(compCtx, {
+        /* Comparison */
+        const cpCtx = document.getElementById('comparisonChart').getContext('2d');
+        const cpChart = new Chart(cpCtx, {
             type: 'bar',
             data: {
-                labels: ['CPU (%)', 'Memory (%)', 'Latency (ms)'],
-                datasets: [
-                    {
-                        label: 'Before (Peak Spike)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.8)', // Red
-                        borderRadius: 4,
-                        data: [0, 0, 0]
-                    },
-                    {
-                        label: 'After (Current)',
-                        backgroundColor: 'rgba(34, 197, 94, 0.8)', // Green
-                        borderRadius: 4,
-                        data: [0, 0, 0]
-                    }
+                labels: ['CPU (%)', 'Memory (%)', 'Latency (÷10)'], datasets: [
+                    { label: 'Before (Peak)', backgroundColor: 'rgba(248,113,113,.72)', borderColor: '#f87171', borderWidth: 1.5, borderRadius: 6, data: [0, 0, 0] },
+                    { label: 'After (Now)', backgroundColor: 'rgba(74,222,128,.62)', borderColor: '#4ade80', borderWidth: 1.5, borderRadius: 6, data: [0, 0, 0] }
+                ]
+            },
+            options: {
+                responsive: true, interaction: { mode: 'index', intersect: false },
+                scales: { y: { grid: { color: gc }, beginAtZero: true, ticks: { font: { size: 10 } } }, x: { grid: { color: 'transparent' }, ticks: { font: { size: 10 } } } },
+                plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } }, animation: { duration: 600 }
+            }
+        });
+
+        /* Radar */
+        const rdCtx = document.getElementById('radarChart').getContext('2d');
+        const rdChart = new Chart(rdCtx, {
+            type: 'radar',
+            data: {
+                labels: ['CPU', 'Memory', 'Latency', 'Stability', 'Health'], datasets: [
+                    { label: 'State', data: [0, 0, 0, 100, 100], backgroundColor: 'rgba(96,165,250,.14)', borderColor: '#60a5fa', borderWidth: 2, pointBackgroundColor: '#60a5fa', pointRadius: 4 }
                 ]
             },
             options: {
                 responsive: true,
-                scales: {
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
-                },
-                plugins: { legend: { position: 'bottom' } }
+                scales: { r: { min: 0, max: 100, grid: { color: gc }, angleLines: { color: gc }, ticks: { display: false }, pointLabels: { font: { size: 10 }, color: '#94a3b8' } } },
+                plugins: { legend: { display: false } }, animation: { duration: 700 }
             }
         });
 
-        // --- Logic to track peak chaos for the "Before" chart ---
-        let peakCpu = 0;
-        let peakMem = 0;
-        let peakLat = 0;
-
-        async function updateDashboard() {
-            try {
-                const res = await fetch('/api/data');
-                const data = await res.json();
-
-                if(data.timestamps.length === 0) return;
-
-                const lastIdx = data.timestamps.length - 1;
-                const currentCpu = data.cpu[lastIdx];
-                const currentMem = data.memory[lastIdx];
-                const currentLat = data.latency[lastIdx];
-                const currentState = data.states[lastIdx];
-
-                // Update Live Values
-                document.getElementById('current-cpu').innerText = currentCpu.toFixed(1);
-                document.getElementById('current-mem').innerText = currentMem.toFixed(1);
-                document.getElementById('current-lat').innerText = currentLat.toFixed(0);
-
-                // Update Status Badge
-                const badge = document.getElementById('status-badge');
-                if(currentState === 'NORMAL' || currentState === '') {
-                    badge.className = 'px-6 py-3 rounded-full font-bold text-sm bg-green-500/20 text-green-400 border border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]';
-                    badge.innerHTML = '✅ SYSTEM NORMAL';
-                } else {
-                    badge.className = 'px-6 py-3 rounded-full font-bold text-sm bg-red-500/20 text-red-400 border border-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]';
-                    badge.innerHTML = '⚠️ MITIGATING: ' + currentState;
-                    
-                    // IF THERE IS A SPIKE, RECORD THE PEAK VALUES FOR THE "BEFORE" GRAPH
-                    if(currentCpu > peakCpu) peakCpu = currentCpu;
-                    if(currentMem > peakMem) peakMem = currentMem;
-                    if(currentLat > peakLat) peakLat = currentLat;
-                }
-
-                // Update Live Timeline Chart
-                timelineChart.data.labels = data.timestamps;
-                timelineChart.data.datasets[0].data = data.cpu;
-                timelineChart.data.datasets[1].data = data.memory;
-                // Divide latency by 10 so it fits nicely on the same axis as CPU/Memory percentages
-                timelineChart.data.datasets[2].data = data.latency.map(l => l / 10); 
-                timelineChart.update();
-
-                // Update Before/After Comparison Chart
-                // Dataset 0 is "Before" (The recorded peaks)
-                comparisonChart.data.datasets[0].data = [peakCpu, peakMem, peakLat / 10]; 
-                // Dataset 1 is "After" (The current mitigated state)
-                comparisonChart.data.datasets[1].data = [currentCpu, currentMem, currentLat / 10];
-                comparisonChart.update();
-
-            } catch (error) {
-                console.error("Error fetching data:", error);
+        /* Resource Allocation Tug-of-War */
+        const tugCtx = document.getElementById('tugChart').getContext('2d');
+        const tugChart = new Chart(tugCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Host Capacity'],
+                datasets: [
+                    { label: 'Critical Service', backgroundColor: '#4ade80', borderRadius: { topLeft: 12, bottomLeft: 12 }, data: [100] },
+                    { label: 'Noisy Neighbour', backgroundColor: '#f87171', borderRadius: { topRight: 12, bottomRight: 12 }, data: [0] }
+                ]
+            },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true, max: 100, display: false },
+                    y: { stacked: true, display: false }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 15 } },
+                    tooltip: { callbacks: { label: function (c) { return c.dataset.label + ': ' + c.raw.toFixed(1) + '%'; } } }
+                },
+                animation: { duration: 500 }
             }
+        });
+
+        /* ─── RING GAUGE ─── */
+        function setRing(id, pct, color) {
+            const el = document.getElementById(id);
+            el.style.strokeDashoffset = 169.6 * (1 - Math.min(pct, 100) / 100);
+            el.style.stroke = color;
         }
 
-        setInterval(updateDashboard, 2000); // Refresh every 2 seconds
-        updateDashboard();
+        /* ─── COUNTER ─── */
+        function animateVal(el, target, dec) {
+            const cur = parseFloat(el.innerText) || 0, diff = target - cur;
+            let i = 0; const steps = 14;
+            const s = () => { i++; el.innerText = (cur + diff * (i / steps)).toFixed(dec); if (i < steps) requestAnimationFrame(s); else el.innerText = target.toFixed(dec); };
+            requestAnimationFrame(s);
+        }
+
+        /* ─── EVENT LOG ─── */
+        const elog = document.getElementById('event-log');
+        let lastState = '';
+        function addEvent(txt, type, icon) {
+            const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const d = document.createElement('div');
+            d.className = `ev ${type}`;
+            d.innerHTML = `<span>${icon}</span><div><div class="evtxt">${txt}</div><div class="evt">${now}</div></div>`;
+            elog.prepend(d);
+            while (elog.children.length > 40) elog.removeChild(elog.lastChild);
+        }
+
+        /* ─── AI CHAT ─── */
+        const chatBox = document.getElementById('chat-msgs');
+        const chatInput = document.getElementById('chat-input');
+        let sysData = null;
+
+        function appendMsg(txt, role) {
+            const m = document.createElement('div');
+            m.className = `msg ${role}`; m.textContent = txt;
+            chatBox.appendChild(m); chatBox.scrollTop = chatBox.scrollHeight; return m;
+        }
+
+        const ANSWERS = {
+            cpu: d => `CPU at ${d.cpu.toFixed(1)}%. ${d.cpu > 70 ? '⚠️ Contention detected — throttle applied to noisy containers.' : '✅ Nominal. No CPU issues.'}`,
+            mem: d => `Memory at ${d.mem.toFixed(1)}%. ${d.mem > 60 ? '⚠️ Pressure detected. 256 MB cap enforced on noisy container.' : '✅ Memory within bounds.'}`,
+            lat: d => `Latency: ${d.lat.toFixed(0)} ms. ${d.lat > 200 ? '🚨 High latency — critical service priority boosted.' : '✅ Latency within SLA.'}`,
+            stat: d => `State: ${d.state}. ${d.state === 'NORMAL' ? '✅ Passive monitoring mode; all resources nominal.' : '⚠️ Autonomous mitigation active for: ' + d.state}`,
+            help: _ => 'Ask about: cpu · memory · latency · status · actions',
+            act: d => d.state === 'NORMAL' ? '✅ No active mitigations.' : 'Mitigations for ' + d.state + ': CPU throttle, memory cap, priority boost.',
+            default: d => `System is ${d.state === 'NORMAL' ? 'healthy' : 'under pressure'}. CPU ${d.cpu.toFixed(1)}%, Mem ${d.mem.toFixed(1)}%, Lat ${d.lat.toFixed(0)} ms.`
+        };
+        function aiReply(q) {
+            const d = sysData || { cpu: 0, mem: 0, lat: 0, state: 'UNKNOWN' };
+            q = q.toLowerCase();
+            if (q.includes('cpu')) return ANSWERS.cpu(d);
+            if (q.includes('mem')) return ANSWERS.mem(d);
+            if (q.includes('lat') || q.includes('slow') || q.includes('speed')) return ANSWERS.lat(d);
+            if (q.includes('stat') || q.includes('how') || q.includes('state')) return ANSWERS.stat(d);
+            if (q.includes('help') || q.includes('?')) return ANSWERS.help(d);
+            if (q.includes('act') || q.includes('fix') || q.includes('migat')) return ANSWERS.act(d);
+            return ANSWERS.default(d);
+        }
+        function sendChat() {
+            const t = chatInput.value.trim(); if (!t) return;
+            chatInput.value = ''; appendMsg(t, 'user');
+            const typing = appendMsg('…', 'ai typing');
+            setTimeout(() => { typing.remove(); appendMsg(aiReply(t), 'ai'); }, 550 + Math.random() * 400);
+        }
+        document.getElementById('chat-send').addEventListener('click', sendChat);
+        chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+        setTimeout(() => appendMsg('👋 Hi! Ask me about CPU, memory, latency, or system status.', 'ai'), 900);
+
+        /* ─── PEAK TRACKING ─── */
+        let pkCpu = 0, pkMem = 0, pkLat = 0;
+
+        /* ─── MAIN POLL LOOP ─── */
+        async function poll() {
+            try {
+                const r = await fetch('/api/data');
+                const d = await r.json();
+                if (!d.timestamps || d.timestamps.length === 0) return;
+                const n = d.timestamps.length - 1;
+                const cpu = d.cpu[n], mem = d.memory[n], lat = d.latency[n], state = d.states[n] || 'NORMAL';
+                sysData = { cpu, mem, lat, state };
+
+                // Update live anomaly card
+                if (typeof updateAnomalyMonitor === 'function') {
+                    updateAnomalyMonitor(cpu, mem, lat, state);
+                }
+
+                animateVal(document.getElementById('val-cpu'), cpu, 1);
+                animateVal(document.getElementById('val-mem'), mem, 1);
+                animateVal(document.getElementById('val-lat'), lat, 0);
+
+                const cCpu = cpu > 80 ? '#f87171' : cpu > 50 ? '#fb923c' : '#60a5fa';
+                const cMem = mem > 70 ? '#f87171' : mem > 45 ? '#fbbf24' : '#a78bfa';
+                const cLat = lat > 300 ? '#f87171' : lat > 150 ? '#fb923c' : '#22d3ee';
+                setRing('ring-cpu', cpu, cCpu);
+                setRing('ring-mem', mem, cMem);
+                setRing('ring-lat', Math.min(lat / 5, 100), cLat);
+
+                function setStat(id, v, w, c) { const el = document.getElementById(id); el.textContent = v >= c ? 'CRITICAL' : v >= w ? 'WARNING' : 'SAFE'; el.style.color = v >= c ? 'var(--red)' : v >= w ? 'var(--orange)' : 'var(--green)'; }
+                setStat('cpu-status', cpu, 50, 80); setStat('mem-status', mem, 45, 70); setStat('lat-status', lat, 150, 300);
+
+                const badge = document.getElementById('status-badge');
+                if (state === 'NORMAL') { badge.className = 'status-pill s-normal'; badge.textContent = '✅ SYSTEM NORMAL'; }
+                else { badge.className = 'status-pill s-alert'; badge.textContent = '⚠️ ' + state.replace(/_/g, ' '); }
+
+                if (state !== lastState) {
+                    if (state === 'NORMAL') addEvent('Returned to normal. Mitigation withdrawn.', 'normal', '✅');
+                    else if (state.includes('CPU')) addEvent(`CPU contention (${cpu.toFixed(1)}%). Throttle applied.`, 'crit', '🔴');
+                    else if (state.includes('MEMORY')) addEvent(`Memory pressure (${mem.toFixed(1)}%). Cap enforced.`, 'warning', '🟠');
+                    else if (state.includes('LATENCY')) addEvent(`Latency spike (${lat.toFixed(0)} ms). Priority boosted.`, 'warning', '🟡');
+                    else addEvent('Multi-resource contention. Full mitigation active.', 'crit', '🚨');
+                    lastState = state;
+                }
+
+                if (state !== 'NORMAL') { if (cpu > pkCpu) pkCpu = cpu; if (mem > pkMem) pkMem = mem; if (lat > pkLat) pkLat = lat; }
+
+                tlChart.data.labels = d.timestamps;
+                tlChart.data.datasets[0].data = d.cpu;
+                tlChart.data.datasets[1].data = d.memory;
+                tlChart.data.datasets[2].data = d.latency;
+                tlChart.update('none');
+
+                // Tug-of-War chart: Noisy Neighbour eats up CPU, Critical Service gets remainder (but min 5% to stay visible)
+                const noisyShare = Math.min(cpu, 95);
+                const critShare = Math.max(100 - noisyShare, 5);
+                tugChart.data.datasets[0].data = [critShare];
+                tugChart.data.datasets[1].data = [noisyShare];
+                tugChart.update('none');
+                cpChart.data.datasets[0].data = [pkCpu, pkMem, pkLat / 10]; cpChart.data.datasets[1].data = [cpu, mem, lat / 10]; cpChart.update();
+                const stab = state === 'NORMAL' ? 100 : Math.max(0, 100 - cpu);
+                const health = Math.max(0, Math.min(100 - cpu * .4 - mem * .3 - lat * .1, 100));
+                rdChart.data.datasets[0].data = [Math.min(cpu, 100), Math.min(mem, 100), Math.min(lat / 5, 100), stab, health]; rdChart.update();
+            } catch (e) { console.error(e); }
+        }
+        setInterval(poll, 2500); poll();
     </script>
 </body>
+
 </html>
